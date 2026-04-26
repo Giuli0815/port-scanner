@@ -1,0 +1,44 @@
+name: Build macOS DMG
+
+on:
+  workflow_dispatch:   # run manually from the Actions tab
+  push:
+    branches: [main]
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install pyinstaller customtkinter
+
+      - name: Build .app bundle
+        run: pyinstaller PortScanner_mac.spec
+
+      - name: Create DMG
+        run: |
+          mkdir -p dist/dmg_stage
+          cp -r dist/PortScanner.app dist/dmg_stage/
+          ln -s /Applications dist/dmg_stage/Applications
+          hdiutil create \
+            -volname "Port Scanner" \
+            -srcfolder dist/dmg_stage \
+            -ov -format UDZO \
+            dist/PortScanner.dmg
+          rm -rf dist/dmg_stage
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PortScanner-macOS
+          path: dist/PortScanner.dmg
+          retention-days: 30
